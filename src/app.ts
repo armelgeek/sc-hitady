@@ -7,6 +7,7 @@ import badgesRouter from './infrastructure/controllers/badges.controller'
 import discoveryRouter from './infrastructure/controllers/discovery.controller'
 import ratingsRouter from './infrastructure/controllers/ratings.controller'
 import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
+import tendersRouter from './infrastructure/controllers/tenders.controller'
 import userProfileRouter from './infrastructure/controllers/user-profile.controller'
 import { errorHandler, notFound } from './infrastructure/middlewares/error.middleware'
 import { responseMiddleware } from './infrastructure/middlewares/response.middleware'
@@ -79,6 +80,8 @@ export class App {
     this.app.basePath('/api').route('/badges', badgesRouter)
     // Discovery/search routes
     this.app.basePath('/api').route('/discovery', discoveryRouter)
+    // Tenders (Call for tenders / Appels d'offres) routes
+    this.app.basePath('/api').route('/tenders', tendersRouter)
     this.app.route('/', Home)
   }
 

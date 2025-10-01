@@ -8,3 +8,4 @@ export {
   specializedCriteria,
   userBadges
 } from './ratings'
+export { tenderBids, tenderNotifications, tenders } from './tenders'
