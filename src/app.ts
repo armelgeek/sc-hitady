@@ -3,7 +3,8 @@ import { apiReference } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
-import router, { type auth } from './infrastructure/config/auth.config'
+import badgesRouter from './infrastructure/controllers/badges.controller'
+import ratingsRouter from './infrastructure/controllers/ratings.controller'
 import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
 import userProfileRouter from './infrastructure/controllers/user-profile.controller'
 import { errorHandler, notFound } from './infrastructure/middlewares/error.middleware'
@@ -16,16 +17,42 @@ import type { Routes } from './domain/types'
 export class App {
   private app: OpenAPIHono<{
     Variables: {
-      user: typeof auth.$Infer.Session.user | null
-      session: typeof auth.$Infer.Session.session | null
+      user: {
+        id: string
+        name: string
+        email: string
+        username?: string | null
+        isAdmin: boolean
+        isVerified: boolean
+        isProfessional: boolean
+      } | null
+      session: {
+        id: string
+        token: string
+        expiresAt: Date
+        userId: string
+      } | null
     }
   }>
 
   constructor(routes: Routes[]) {
     this.app = new OpenAPIHono<{
       Variables: {
-        user: typeof auth.$Infer.Session.user | null
-        session: typeof auth.$Infer.Session.session | null
+        user: {
+          id: string
+          name: string
+          email: string
+          username?: string | null
+          isAdmin: boolean
+          isVerified: boolean
+          isProfessional: boolean
+        } | null
+        session: {
+          id: string
+          token: string
+          expiresAt: Date
+          userId: string
+        } | null
       }
     }>()
 
@@ -34,9 +61,6 @@ export class App {
     this.initializeSwaggerUI()
     this.initializeRouteFallback()
     this.initializeErrorHandler()
-    /**showRoutes(this.app, {
-      verbose: true,
-    })**/
   }
 
   private initializeRoutes(routes: Routes[]) {
@@ -44,11 +68,14 @@ export class App {
       route.initRoutes()
       this.app.route('/api', route.controller)
     })
-    this.app.basePath('/api').route('/', router)
-    // Add revolutionary authentication routes
+    // Revolutionary authentication routes
     this.app.basePath('/api').route('/revolutionary-auth', revolutionaryAuthRouter)
     this.app.basePath('/api').route('/verification', userProfileRouter)
     this.app.basePath('/api').route('/profile', userProfileRouter)
+    // Rating system routes
+    this.app.basePath('/api').route('/ratings', ratingsRouter)
+    // Badge system routes
+    this.app.basePath('/api').route('/badges', badgesRouter)
     this.app.route('/', Home)
   }
 

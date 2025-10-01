@@ -11,7 +11,7 @@ describe('Revolutionary Authentication Integration', () => {
   })
 
   describe('Registration Flow', () => {
-    it('should have revolutionary auth registration endpoint', async () => {
+    it('should have revolutionary auth registration endpoint', () => {
       // This is a basic check to ensure the route is registered
       // Full integration test would require database setup
       const routes = app.routes
@@ -27,9 +27,7 @@ describe('Revolutionary Authentication Integration', () => {
     })
 
     it('should generate valid passphrase', async () => {
-      const { generatePassphrase, validatePassphraseFormat } = await import(
-        '@/infrastructure/utils/passphrase.util'
-      )
+      const { generatePassphrase, validatePassphraseFormat } = await import('@/infrastructure/utils/passphrase.util')
       const passphrase = generatePassphrase(4)
       expect(validatePassphraseFormat(passphrase)).toBe(true)
     })
