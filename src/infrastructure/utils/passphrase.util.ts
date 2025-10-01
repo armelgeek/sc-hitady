@@ -6,30 +6,90 @@
 // Malagasy words list for passphrase generation
 const MALAGASY_WORDS = [
   // Food
-  'vary', 'loaka', 'kitoza', 'mofo', 'kafe', 'dite', 'sakay', 'voanjobory',
-  'ravitoto', 'henakisoa', 'akoho', 'trondro', 'voanjo', 'masikita',
-  
+  'vary',
+  'loaka',
+  'kitoza',
+  'mofo',
+  'kafe',
+  'dite',
+  'sakay',
+  'voanjobory',
+  'ravitoto',
+  'henakisoa',
+  'akoho',
+  'trondro',
+  'voanjo',
+  'masikita',
+
   // Nature
-  'rano', 'lanitra', 'hazo', 'voninkazo', 'rivotra', 'masoandro', 'volana',
-  'kintana', 'rahona', 'orana', 'elatra', 'vorona',
-  
+  'rano',
+  'lanitra',
+  'hazo',
+  'voninkazo',
+  'rivotra',
+  'masoandro',
+  'volana',
+  'kintana',
+  'rahona',
+  'orana',
+  'elatra',
+  'vorona',
+
   // Colors
-  'fotsy', 'mainty', 'mena', 'maitso', 'manga', 'volomboasary', 'volomborona',
-  
+  'fotsy',
+  'mainty',
+  'mena',
+  'maitso',
+  'manga',
+  'volomboasary',
+  'volomborona',
+
   // Common words
-  'fitiavana', 'fiadanana', 'fahazavana', 'fahasoavana', 'fahamarinana',
-  'fahendrena', 'fahombiazana', 'fanantenana', 'fahasalamana',
-  
+  'fitiavana',
+  'fiadanana',
+  'fahazavana',
+  'fahasoavana',
+  'fahamarinana',
+  'fahendrena',
+  'fahombiazana',
+  'fanantenana',
+  'fahasalamana',
+
   // Objects
-  'trano', 'vavahady', 'latabatra', 'seza', 'fandriana', 'varavarana',
-  'taratasy', 'boky', 'penina', 'fitaovana',
-  
+  'trano',
+  'vavahady',
+  'latabatra',
+  'seza',
+  'fandriana',
+  'varavarana',
+  'taratasy',
+  'boky',
+  'penina',
+  'fitaovana',
+
   // Actions
-  'mandeha', 'mihira', 'mihinana', 'misotro', 'matory', 'miasa',
-  'manoratra', 'mamaky', 'miteny', 'mihaino',
-  
+  'mandeha',
+  'mihira',
+  'mihinana',
+  'misotro',
+  'matory',
+  'miasa',
+  'manoratra',
+  'mamaky',
+  'miteny',
+  'mihaino',
+
   // Numbers (text form)
-  'iray', 'roa', 'telo', 'efatra', 'dimy', 'enina', 'fito', 'valo', 'sivy', 'folo'
+  'iray',
+  'roa',
+  'telo',
+  'efatra',
+  'dimy',
+  'enina',
+  'fito',
+  'valo',
+  'sivy',
+  'folo'
 ]
 
 /**
@@ -41,20 +101,20 @@ export function generatePassphrase(wordCount: number = 4): string {
   if (wordCount < 2 || wordCount > 10) {
     throw new Error('Word count must be between 2 and 10')
   }
-  
+
   const selectedWords: string[] = []
   const usedIndices = new Set<number>()
-  
+
   while (selectedWords.length < wordCount) {
     const randomIndex = Math.floor(Math.random() * MALAGASY_WORDS.length)
-    
+
     // Ensure we don't repeat words
     if (!usedIndices.has(randomIndex)) {
       usedIndices.add(randomIndex)
       selectedWords.push(MALAGASY_WORDS[randomIndex])
     }
   }
-  
+
   return selectedWords.join(' ')
 }
 
@@ -67,16 +127,16 @@ export function validatePassphraseFormat(passphrase: string): boolean {
   if (!passphrase || typeof passphrase !== 'string') {
     return false
   }
-  
+
   const words = passphrase.trim().split(/\s+/)
-  
+
   // Must have between 2 and 10 words
   if (words.length < 2 || words.length > 10) {
     return false
   }
-  
+
   // Each word must be valid
-  return words.every(word => {
+  return words.every((word) => {
     return word.length >= 2 && word.length <= 20 && /^[a-z]+$/i.test(word)
   })
 }
@@ -90,11 +150,11 @@ export function generateRecoveryHint(recoveryWord: string): string {
   if (!recoveryWord || recoveryWord.length < 3) {
     return 'votre mot'
   }
-  
+
   const first = recoveryWord[0]
-  const last = recoveryWord[recoveryWord.length - 1]
+  const last = recoveryWord.at(-1)
   const middle = '*'.repeat(recoveryWord.length - 2)
-  
+
   return `${first}${middle}${last}`
 }
 
@@ -105,15 +165,12 @@ export function generateRecoveryHint(recoveryWord: string): string {
  * @returns Encrypted text (hex encoded)
  */
 export async function encryptText(text: string, key: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(text)
-  
   // Use Bun.password.hash for consistent encryption
   const hash = await Bun.password.hash(text + key, {
     algorithm: 'bcrypt',
     cost: 10
   })
-  
+
   return hash
 }
 

@@ -1,5 +1,5 @@
-import type { ErrorHandler, NotFoundHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import type { ErrorHandler, NotFoundHandler } from 'hono'
 import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status'
 
 export const errorHandler: ErrorHandler = (err, c) => {
@@ -29,31 +29,25 @@ export const notFound: NotFoundHandler = (c) => {
   )
 }
 
-
-
 export class ValidationError extends HTTPException {
-  details: Record<string, any>;
-  message: string; 
+  details: Record<string, any>
+  message: string
 
-  constructor(
-    message: string,
-    details: Record<string, any> = {},
-    statusCode: ContentfulStatusCode = 500
-  ) {
+  constructor(message: string, details: Record<string, any> = {}, statusCode: ContentfulStatusCode = 500) {
     const errorResponse = new Response(
       JSON.stringify({
-        error: "Validation Error",
+        error: 'Validation Error',
         message,
-        details,
+        details
       }),
       {
-        status: statusCode,
+        status: statusCode
       }
-    );
-    super(statusCode, { res: errorResponse });
-    this.details = details;
-    this.message = message;
+    )
+    super(statusCode, { res: errorResponse })
+    this.details = details
+    this.message = message
   }
 }
 
-export default errorHandler;
+export default errorHandler

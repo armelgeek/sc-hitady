@@ -1,8 +1,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../database/db'
 import { users } from '../database/schema/auth'
-import { eq } from 'drizzle-orm'
 
 const router = new OpenAPIHono()
 
@@ -48,7 +48,7 @@ router.post('/submit', async (c) => {
   try {
     const body = await c.req.json()
     const validatedData = VerifyIdentitySchema.parse(body)
-    
+
     // Update user with CIN information
     const result = await db
       .update(users)
@@ -60,11 +60,11 @@ router.post('/submit', async (c) => {
       })
       .where(eq(users.id, validatedData.userId))
       .returning()
-    
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       message: 'Identity verification submitted. Please wait for admin approval.',
@@ -86,9 +86,9 @@ router.post('/submit', async (c) => {
 router.post('/approve/:userId', async (c) => {
   try {
     const userId = c.req.param('userId')
-    
+
     // TODO: Add admin authorization check here
-    
+
     const result = await db
       .update(users)
       .set({
@@ -98,11 +98,11 @@ router.post('/approve/:userId', async (c) => {
       })
       .where(eq(users.id, userId))
       .returning()
-    
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       message: 'Identity verified successfully',
@@ -125,7 +125,7 @@ router.post('/approve/:userId', async (c) => {
 router.get('/status/:userId', async (c) => {
   try {
     const userId = c.req.param('userId')
-    
+
     const result = await db
       .select({
         id: users.id,
@@ -137,11 +137,11 @@ router.get('/status/:userId', async (c) => {
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
-    
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       data: result[0]
@@ -160,29 +160,25 @@ router.post('/professional', async (c) => {
   try {
     const body = await c.req.json()
     const validatedData = ProfessionalProfileSchema.parse(body)
-    
+
     const updateData: any = {
       isProfessional: validatedData.isProfessional,
       updatedAt: new Date()
     }
-    
+
     if (validatedData.activityCategory) updateData.activityCategory = validatedData.activityCategory
     if (validatedData.serviceDescription) updateData.serviceDescription = validatedData.serviceDescription
     if (validatedData.address) updateData.address = validatedData.address
     if (validatedData.gpsCoordinates) updateData.gpsCoordinates = validatedData.gpsCoordinates
     if (validatedData.openingHours) updateData.openingHours = validatedData.openingHours
     if (validatedData.contactNumbers) updateData.contactNumbers = validatedData.contactNumbers
-    
-    const result = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, validatedData.userId))
-      .returning()
-    
+
+    const result = await db.update(users).set(updateData).where(eq(users.id, validatedData.userId)).returning()
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       message: 'Professional profile updated',
@@ -202,25 +198,21 @@ router.post('/portfolio', async (c) => {
   try {
     const body = await c.req.json()
     const validatedData = PortfolioSchema.parse(body)
-    
+
     const updateData: any = {
       updatedAt: new Date()
     }
-    
+
     if (validatedData.portfolioPhotos) updateData.portfolioPhotos = validatedData.portfolioPhotos
     if (validatedData.portfolioVideos) updateData.portfolioVideos = validatedData.portfolioVideos
     if (validatedData.certificates) updateData.certificates = validatedData.certificates
-    
-    const result = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, validatedData.userId))
-      .returning()
-    
+
+    const result = await db.update(users).set(updateData).where(eq(users.id, validatedData.userId)).returning()
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       message: 'Portfolio updated',
@@ -245,26 +237,22 @@ router.post('/status', async (c) => {
   try {
     const body = await c.req.json()
     const validatedData = StatusSchema.parse(body)
-    
+
     const updateData: any = {
       status: validatedData.status,
       updatedAt: new Date()
     }
-    
+
     if (validatedData.autoStatus !== undefined) {
       updateData.autoStatus = validatedData.autoStatus
     }
-    
-    const result = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, validatedData.userId))
-      .returning()
-    
+
+    const result = await db.update(users).set(updateData).where(eq(users.id, validatedData.userId)).returning()
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     return c.json({
       success: true,
       message: 'Status updated',
@@ -287,19 +275,15 @@ router.post('/status', async (c) => {
 router.get('/:userId', async (c) => {
   try {
     const userId = c.req.param('userId')
-    
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    
+
+    const result = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
     if (result.length === 0) {
       return c.json({ error: 'User not found' }, 404)
     }
-    
+
     const user = result[0]
-    
+
     // Don't return sensitive data
     const publicProfile = {
       id: user.id,
@@ -322,7 +306,7 @@ router.get('/:userId', async (c) => {
       status: user.status,
       createdAt: user.createdAt
     }
-    
+
     return c.json({
       success: true,
       data: publicProfile

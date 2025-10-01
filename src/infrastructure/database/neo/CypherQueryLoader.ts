@@ -56,7 +56,6 @@ export class CypherQueryLoader {
     }
   }
 
-
   clearCache(): void {
     this.queries.clear()
     console.log('🗑️ Cache des requêtes vidé')

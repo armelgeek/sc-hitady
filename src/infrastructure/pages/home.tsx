@@ -91,8 +91,6 @@ Home.get('/', (c) => {
             </p>
           </div>
 
-         
-
           <div class="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-0 relative grid-flow-row">
             <a
               target="_blank"

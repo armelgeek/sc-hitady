@@ -255,11 +255,11 @@ Authorization: Bearer <session_token>
     "serviceDescription": "Réparation de voitures et motos",
     "address": "Lot 123, Analakely, Antananarivo",
     "gpsCoordinates": "-18.9100,47.5362",
-    "openingHours": { ... },
+    "openingHours": {},
     "contactNumbers": ["+261340000000"],
-    "portfolioPhotos": ["..."],
-    "portfolioVideos": ["..."],
-    "certificates": ["..."],
+    "portfolioPhotos": [],
+    "portfolioVideos": [],
+    "certificates": [],
     "status": "available",
     "createdAt": "2024-01-01T00:00:00.000Z"
   }

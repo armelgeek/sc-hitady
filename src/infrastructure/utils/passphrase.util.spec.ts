@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { 
-  generatePassphrase, 
-  validatePassphraseFormat, 
-  generateRecoveryHint,
+import { describe, expect, it } from 'vitest'
+import {
   encryptText,
+  generatePassphrase,
+  generateRecoveryHint,
+  validatePassphraseFormat,
   verifyEncryptedText
 } from './passphrase.util'
 
@@ -43,7 +43,9 @@ describe('Passphrase Utility', () => {
     it('should reject invalid passphrase format', () => {
       expect(validatePassphraseFormat('')).toBe(false)
       expect(validatePassphraseFormat('oneword')).toBe(false)
-      expect(validatePassphraseFormat('word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11')).toBe(false)
+      expect(validatePassphraseFormat('word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11')).toBe(
+        false
+      )
       expect(validatePassphraseFormat('invalid123 word')).toBe(false)
     })
 
@@ -80,11 +82,11 @@ describe('Passphrase Utility', () => {
     it('should encrypt and verify text correctly', async () => {
       const text = 'testpassword'
       const key = 'testuser'
-      
+
       const encrypted = await encryptText(text, key)
       expect(encrypted).toBeTruthy()
       expect(encrypted).not.toBe(text)
-      
+
       const isValid = await verifyEncryptedText(text, encrypted, key)
       expect(isValid).toBe(true)
     })
@@ -93,7 +95,7 @@ describe('Passphrase Utility', () => {
       const text = 'testpassword'
       const wrongText = 'wrongpassword'
       const key = 'testuser'
-      
+
       const encrypted = await encryptText(text, key)
       const isValid = await verifyEncryptedText(wrongText, encrypted, key)
       expect(isValid).toBe(false)
@@ -103,7 +105,7 @@ describe('Passphrase Utility', () => {
       const text = 'testpassword'
       const key = 'testuser'
       const wrongKey = 'wronguser'
-      
+
       const encrypted = await encryptText(text, key)
       const isValid = await verifyEncryptedText(text, encrypted, wrongKey)
       expect(isValid).toBe(false)
