@@ -61,25 +61,50 @@ router.post('/:userId', async (c) => {
     return c.json({ success: false, message: 'You can only follow professionals' }, 400)
   }
 
-  // Check if already following
-  const existingFollow = await db
-    .select()
-    .from(follows)
-    .where(and(eq(follows.followerId, user.id), eq(follows.followingId, targetUserId)))
-    .limit(1)
+  // Check if already following using Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    const checkResult = await loader.run('social', 'check-following', {
+      followerId: user.id,
+      followingId: targetUserId
+    })
 
-  if (existingFollow.length > 0) {
-    return c.json({ success: false, message: 'Already following this user' }, 400)
+    if (checkResult.records[0]?.get('isFollowing')) {
+      return c.json({ success: false, message: 'Already following this user' }, 400)
+    }
+  } catch (error) {
+    console.error('Error checking follow status in Neo4j:', error)
   }
 
-  // Create follow relationship
+  const followId = generateId()
+  const now = new Date()
+
+  // Create follow relationship in PostgreSQL (for backward compatibility)
   await db.insert(follows).values({
-    id: generateId(),
+    id: followId,
     followerId: user.id,
     followingId: targetUserId,
     notificationsEnabled: true,
-    createdAt: new Date()
+    createdAt: now
   })
+
+  // Create follow relationship in Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'create-follow', {
+      followerId: user.id,
+      followingId: targetUserId,
+      followId,
+      notificationsEnabled: true,
+      createdAt: now.toISOString()
+    })
+  } catch (error) {
+    console.error('Error creating follow relationship in Neo4j:', error)
+  }
 
   return c.json({
     success: true,
@@ -111,8 +136,21 @@ router.delete('/:userId', async (c) => {
     return c.json({ success: false, message: 'Not following this user' }, 400)
   }
 
-  // Remove follow relationship
+  // Remove follow relationship from PostgreSQL
   await db.delete(follows).where(eq(follows.id, existingFollow[0].id))
+
+  // Remove follow relationship from Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'remove-follow', {
+      followerId: user.id,
+      followingId: targetUserId
+    })
+  } catch (error) {
+    console.error('Error removing follow relationship from Neo4j:', error)
+  }
 
   return c.json({
     success: true,
@@ -221,13 +259,35 @@ router.get('/followers', async (c) => {
 router.get('/stats/:userId', async (c) => {
   const userId = c.req.param('userId')
 
-  // Count followers
+  try {
+    // Try to get stats from Neo4j first
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    const result = await loader.run('social', 'get-follow-stats', {
+      userId
+    })
+
+    if (result.records.length > 0) {
+      const record = result.records[0]
+      return c.json({
+        success: true,
+        data: {
+          followersCount: Number(record.get('followersCount') || 0),
+          followingCount: Number(record.get('followingCount') || 0)
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching stats from Neo4j:', error)
+  }
+
+  // Fallback to PostgreSQL
   const followersResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(follows)
     .where(eq(follows.followingId, userId))
 
-  // Count following
   const followingResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(follows)
@@ -254,6 +314,29 @@ router.get('/check/:userId', async (c) => {
 
   const targetUserId = c.req.param('userId')
 
+  try {
+    // Check from Neo4j
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    const result = await loader.run('social', 'check-following', {
+      followerId: user.id,
+      followingId: targetUserId
+    })
+
+    if (result.records.length > 0) {
+      return c.json({
+        success: true,
+        data: {
+          isFollowing: result.records[0].get('isFollowing')
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error checking follow status from Neo4j:', error)
+  }
+
+  // Fallback to PostgreSQL
   const existingFollow = await db
     .select()
     .from(follows)
@@ -304,13 +387,27 @@ router.put('/:userId/notifications', async (c) => {
     return c.json({ success: false, message: 'Not following this user' }, 400)
   }
 
-  // Update notifications setting
+  // Update notifications setting in PostgreSQL
   await db
     .update(follows)
     .set({
       notificationsEnabled: data.enabled
     })
     .where(eq(follows.id, existingFollow[0].id))
+
+  // Update notifications setting in Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'update-follow-notifications', {
+      followerId: user.id,
+      followingId: targetUserId,
+      notificationsEnabled: data.enabled
+    })
+  } catch (error) {
+    console.error('Error updating notifications in Neo4j:', error)
+  }
 
   return c.json({
     success: true,
@@ -333,7 +430,58 @@ router.get('/recommendations', async (c) => {
 
   const limit = Number.parseInt(c.req.query('limit') || '10')
 
-  // Get users already following
+  try {
+    // Use Neo4j for smart recommendations based on mutual connections
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    const result = await loader.run('social', 'get-follow-recommendations', {
+      userId: user.id,
+      limit
+    })
+
+    if (result.records.length > 0) {
+      // Get user details from PostgreSQL for the recommended user IDs
+      const recommendedUserIds = result.records.map(r => r.get('userId'))
+      
+      const recommendedUsers = await db
+        .select({
+          professional: {
+            id: users.id,
+            name: users.name,
+            username: users.username,
+            image: users.image,
+            isVerified: users.isVerified,
+            isProfessional: users.isProfessional,
+            activityCategory: users.activityCategory,
+            serviceDescription: users.serviceDescription,
+            city: users.city,
+            district: users.district
+          },
+          mutualConnections: sql<number>`0`
+        })
+        .from(users)
+        .where(sql`${users.id} = ANY(${recommendedUserIds})`)
+      
+      // Merge mutual connections data
+      const recommendations = recommendedUsers.map(rec => {
+        const neoRecord = result.records.find(r => r.get('userId') === rec.professional.id)
+        return {
+          ...rec,
+          mutualConnections: neoRecord ? Number(neoRecord.get('mutualConnections')) : 0
+        }
+      })
+
+      return c.json({
+        success: true,
+        data: recommendations
+      })
+    }
+  } catch (error) {
+    console.error('Error getting recommendations from Neo4j:', error)
+  }
+
+  // Fallback to PostgreSQL simple recommendations
   const alreadyFollowing = await db
     .select({ followingId: follows.followingId })
     .from(follows)
@@ -342,10 +490,8 @@ router.get('/recommendations', async (c) => {
   const followingIds = alreadyFollowing.map((f) => f.followingId)
   followingIds.push(user.id) // Don't recommend yourself
 
-  // Find verified professionals
   const whereConditions = [eq(users.isProfessional, true), eq(users.isVerified, true)]
 
-  // Build the query
   const recommendations = await db
     .select({
       professional: {
