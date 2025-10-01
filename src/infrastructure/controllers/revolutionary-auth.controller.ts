@@ -170,6 +170,12 @@ router.post('/login', async (c) => {
       userAgent: c.req.header('user-agent') || ''
     })
 
+    // Set session cookie
+    c.header(
+      'Set-Cookie',
+      `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`
+    )
+
     return c.json({
       success: true,
       message: 'Login successful',
@@ -251,12 +257,16 @@ router.post('/recover', async (c) => {
  */
 router.post('/logout', async (c) => {
   try {
+    // Get token from cookie or Authorization header
+    const cookieToken = c.req.header('cookie')?.match(/session_token=([^;]+)/)?.[1]
     const authHeader = c.req.header('authorization')
-    if (!authHeader) {
-      return c.json({ error: 'No authorization header' }, 401)
-    }
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-    const token = authHeader.replace('Bearer ', '')
+    const token = cookieToken || bearerToken
+
+    if (!token) {
+      return c.json({ error: 'No session token found' }, 401)
+    }
 
     // Find session
     const sessionResults = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1)
@@ -276,6 +286,9 @@ router.post('/logout', async (c) => {
       // Delete session
       await db.delete(sessions).where(eq(sessions.id, session.id))
     }
+
+    // Clear session cookie
+    c.header('Set-Cookie', `session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
 
     return c.json({
       success: true,
