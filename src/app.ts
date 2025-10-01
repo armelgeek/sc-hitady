@@ -4,9 +4,14 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
 import badgesRouter from './infrastructure/controllers/badges.controller'
+import commentsRouter from './infrastructure/controllers/comments.controller'
 import discoveryRouter from './infrastructure/controllers/discovery.controller'
+import followRouter from './infrastructure/controllers/follow.controller'
+import moderationRouter from './infrastructure/controllers/moderation.controller'
+import postsRouter from './infrastructure/controllers/posts.controller'
 import ratingsRouter from './infrastructure/controllers/ratings.controller'
 import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
+import storiesRouter from './infrastructure/controllers/stories.controller'
 import tendersRouter from './infrastructure/controllers/tenders.controller'
 import userProfileRouter from './infrastructure/controllers/user-profile.controller'
 import { errorHandler, notFound } from './infrastructure/middlewares/error.middleware'
@@ -82,6 +87,12 @@ export class App {
     this.app.basePath('/api').route('/discovery', discoveryRouter)
     // Tenders (Call for tenders / Appels d'offres) routes
     this.app.basePath('/api').route('/tenders', tendersRouter)
+    // Social network routes
+    this.app.basePath('/api').route('/posts', postsRouter)
+    this.app.basePath('/api').route('/comments', commentsRouter)
+    this.app.basePath('/api').route('/stories', storiesRouter)
+    this.app.basePath('/api').route('/follow', followRouter)
+    this.app.basePath('/api').route('/moderation', moderationRouter)
     this.app.route('/', Home)
   }
 

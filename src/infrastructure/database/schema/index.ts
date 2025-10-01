@@ -8,4 +8,15 @@ export {
   specializedCriteria,
   userBadges
 } from './ratings'
+export {
+  comments,
+  contentReports,
+  feedPreferences,
+  follows,
+  likes,
+  posts,
+  savedPosts,
+  stories,
+  storyViews
+} from './social'
 export { tenderBids, tenderNotifications, tenders } from './tenders'
