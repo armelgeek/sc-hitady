@@ -10,6 +10,8 @@ import { Home } from './infrastructure/pages/home'
 import type { Routes } from './domain/types'
 import sessionValidator from './infrastructure/middlewares/unauthorized-access.middleware'
 import addSession from './infrastructure/middlewares/session.middleware'
+import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
+import userProfileRouter from './infrastructure/controllers/user-profile.controller'
 
 export class App {
   private app: OpenAPIHono<{
@@ -43,6 +45,10 @@ export class App {
       this.app.route('/api', route.controller)
     })
     this.app.basePath('/api').route('/', router)
+    // Add revolutionary authentication routes
+    this.app.basePath('/api').route('/revolutionary-auth', revolutionaryAuthRouter)
+    this.app.basePath('/api').route('/verification', userProfileRouter)
+    this.app.basePath('/api').route('/profile', userProfileRouter)
     this.app.route('/', Home)
   }
 
