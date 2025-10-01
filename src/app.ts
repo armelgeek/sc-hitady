@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
 import badgesRouter from './infrastructure/controllers/badges.controller'
+import discoveryRouter from './infrastructure/controllers/discovery.controller'
 import ratingsRouter from './infrastructure/controllers/ratings.controller'
 import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
 import userProfileRouter from './infrastructure/controllers/user-profile.controller'
@@ -76,6 +77,8 @@ export class App {
     this.app.basePath('/api').route('/ratings', ratingsRouter)
     // Badge system routes
     this.app.basePath('/api').route('/badges', badgesRouter)
+    // Discovery/search routes
+    this.app.basePath('/api').route('/discovery', discoveryRouter)
     this.app.route('/', Home)
   }
 
