@@ -109,6 +109,22 @@ router.post('/create', async (c) => {
 
   await db.insert(posts).values(newPost)
 
+  // Sync post to Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'sync-post', {
+      postId,
+      authorId: user.id,
+      createdAt: now.toISOString(),
+      isHidden: false,
+      isPublic: true
+    })
+  } catch (error) {
+    console.error('Error syncing post to Neo4j:', error)
+  }
+
   return c.json({
     success: true,
     message: 'Post created successfully',
@@ -395,6 +411,18 @@ router.delete('/:postId', async (c) => {
     })
     .where(eq(posts.id, postId))
 
+  // Delete from Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'delete-post', {
+      postId
+    })
+  } catch (error) {
+    console.error('Error deleting post from Neo4j:', error)
+  }
+
   return c.json({
     success: true,
     message: 'Post deleted successfully'
@@ -443,6 +471,19 @@ router.post('/:postId/like', async (c) => {
       })
       .where(eq(posts.id, postId))
 
+    // Remove like from Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'remove-post-like', {
+        userId: user.id,
+        postId
+      })
+    } catch (error) {
+      console.error('Error removing like from Neo4j:', error)
+    }
+
     return c.json({
       success: true,
       message: 'Post unliked',
@@ -450,8 +491,9 @@ router.post('/:postId/like', async (c) => {
     })
   } else {
     // Like
+    const likeId = generateId()
     await db.insert(likes).values({
-      id: generateId(),
+      id: likeId,
       userId: user.id,
       postId,
       commentId: null,
@@ -465,6 +507,21 @@ router.post('/:postId/like', async (c) => {
         likesCount: sql`${posts.likesCount} + 1`
       })
       .where(eq(posts.id, postId))
+
+    // Create like in Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'create-post-like', {
+        userId: user.id,
+        postId,
+        likeId,
+        createdAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Error creating like in Neo4j:', error)
+    }
 
     return c.json({
       success: true,
@@ -531,6 +588,19 @@ router.post('/:postId/save', async (c) => {
       })
       .where(eq(posts.id, postId))
 
+    // Remove save from Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'remove-post-save', {
+        userId: user.id,
+        postId
+      })
+    } catch (error) {
+      console.error('Error removing save from Neo4j:', error)
+    }
+
     return c.json({
       success: true,
       message: 'Post unsaved',
@@ -538,12 +608,14 @@ router.post('/:postId/save', async (c) => {
     })
   } else {
     // Save
+    const saveId = generateId()
+    const now = new Date()
     await db.insert(savedPosts).values({
-      id: generateId(),
+      id: saveId,
       userId: user.id,
       postId,
       collectionName: data.collectionName || null,
-      savedAt: new Date()
+      savedAt: now
     })
 
     // Increment saves count
@@ -553,6 +625,22 @@ router.post('/:postId/save', async (c) => {
         savesCount: sql`${posts.savesCount} + 1`
       })
       .where(eq(posts.id, postId))
+
+    // Create save in Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'create-post-save', {
+        userId: user.id,
+        postId,
+        saveId,
+        collectionName: data.collectionName || null,
+        savedAt: now.toISOString()
+      })
+    } catch (error) {
+      console.error('Error creating save in Neo4j:', error)
+    }
 
     return c.json({
       success: true,

@@ -106,6 +106,21 @@ router.post('/create', async (c) => {
 
   await db.insert(stories).values(newStory)
 
+  // Sync story to Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'sync-story', {
+      storyId,
+      authorId: user.id,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString()
+    })
+  } catch (error) {
+    console.error('Error syncing story to Neo4j:', error)
+  }
+
   return c.json({
     success: true,
     message: 'Story created successfully',
@@ -281,11 +296,14 @@ router.post('/:storyId/view', async (c) => {
 
   if (existingView.length === 0) {
     // Record new view
+    const viewId = generateId()
+    const viewedAt = new Date()
+    
     await db.insert(storyViews).values({
-      id: generateId(),
+      id: viewId,
       storyId,
       viewerId: user.id,
-      viewedAt: new Date()
+      viewedAt
     })
 
     // Increment views count
@@ -295,6 +313,21 @@ router.post('/:storyId/view', async (c) => {
         viewsCount: story.viewsCount + 1
       })
       .where(eq(stories.id, storyId))
+
+    // Create view in Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'create-story-view', {
+        storyId,
+        viewerId: user.id,
+        viewId,
+        viewedAt: viewedAt.toISOString()
+      })
+    } catch (error) {
+      console.error('Error creating story view in Neo4j:', error)
+    }
   }
 
   return c.json({

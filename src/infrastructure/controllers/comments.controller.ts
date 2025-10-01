@@ -104,6 +104,41 @@ router.post('/create', async (c) => {
       .where(eq(comments.id, data.parentCommentId))
   }
 
+  // Create comment relationship in Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    if (data.parentCommentId) {
+      // This is a reply
+      await loader.run('social', 'create-comment-reply', {
+        authorId: user.id,
+        commentId,
+        parentCommentId: data.parentCommentId,
+        createdAt: now.toISOString()
+      })
+    } else {
+      // This is a top-level comment
+      await loader.run('social', 'create-comment', {
+        authorId: user.id,
+        postId: data.postId,
+        commentId,
+        createdAt: now.toISOString()
+      })
+    }
+
+    // Sync comment node
+    await loader.run('social', 'sync-comment', {
+      commentId,
+      authorId: user.id,
+      postId: data.postId,
+      createdAt: now.toISOString(),
+      isHidden: false
+    })
+  } catch (error) {
+    console.error('Error creating comment in Neo4j:', error)
+  }
+
   return c.json({
     success: true,
     message: 'Comment created successfully',
@@ -292,6 +327,18 @@ router.delete('/:commentId', async (c) => {
       .where(eq(comments.id, existingComment[0].parentCommentId))
   }
 
+  // Delete comment from Neo4j
+  try {
+    const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+    const loader = new CypherQueryLoader()
+    
+    await loader.run('social', 'delete-comment', {
+      commentId
+    })
+  } catch (error) {
+    console.error('Error deleting comment from Neo4j:', error)
+  }
+
   return c.json({
     success: true,
     message: 'Comment deleted successfully'
@@ -336,6 +383,19 @@ router.post('/:commentId/like', async (c) => {
       })
       .where(eq(comments.id, commentId))
 
+    // Remove like from Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'remove-comment-like', {
+        userId: user.id,
+        commentId
+      })
+    } catch (error) {
+      console.error('Error removing comment like from Neo4j:', error)
+    }
+
     return c.json({
       success: true,
       message: 'Comment unliked',
@@ -343,8 +403,9 @@ router.post('/:commentId/like', async (c) => {
     })
   } else {
     // Like
+    const likeId = generateId()
     await db.insert(likes).values({
-      id: generateId(),
+      id: likeId,
       userId: user.id,
       postId: null,
       commentId,
@@ -358,6 +419,21 @@ router.post('/:commentId/like', async (c) => {
         likesCount: sql`${comments.likesCount} + 1`
       })
       .where(eq(comments.id, commentId))
+
+    // Create like in Neo4j
+    try {
+      const { CypherQueryLoader } = await import('@/infrastructure/database/neo/CypherQueryLoader')
+      const loader = new CypherQueryLoader()
+      
+      await loader.run('social', 'create-comment-like', {
+        userId: user.id,
+        commentId,
+        likeId,
+        createdAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Error creating comment like in Neo4j:', error)
+    }
 
     return c.json({
       success: true,
