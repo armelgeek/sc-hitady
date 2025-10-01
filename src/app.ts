@@ -4,12 +4,14 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { prettyJSON } from 'hono/pretty-json'
 import router, { type auth } from './infrastructure/config/auth.config'
+import revolutionaryAuthRouter from './infrastructure/controllers/revolutionary-auth.controller'
+import userProfileRouter from './infrastructure/controllers/user-profile.controller'
 import { errorHandler, notFound } from './infrastructure/middlewares/error.middleware'
 import { responseMiddleware } from './infrastructure/middlewares/response.middleware'
+import addSession from './infrastructure/middlewares/session.middleware'
+import sessionValidator from './infrastructure/middlewares/unauthorized-access.middleware'
 import { Home } from './infrastructure/pages/home'
 import type { Routes } from './domain/types'
-import sessionValidator from './infrastructure/middlewares/unauthorized-access.middleware'
-import addSession from './infrastructure/middlewares/session.middleware'
 
 export class App {
   private app: OpenAPIHono<{
@@ -26,7 +28,7 @@ export class App {
         session: typeof auth.$Infer.Session.session | null
       }
     }>()
-    
+
     this.initializeGlobalMiddlewares()
     this.initializeRoutes(routes)
     this.initializeSwaggerUI()
@@ -43,6 +45,10 @@ export class App {
       this.app.route('/api', route.controller)
     })
     this.app.basePath('/api').route('/', router)
+    // Add revolutionary authentication routes
+    this.app.basePath('/api').route('/revolutionary-auth', revolutionaryAuthRouter)
+    this.app.basePath('/api').route('/verification', userProfileRouter)
+    this.app.basePath('/api').route('/profile', userProfileRouter)
     this.app.route('/', Home)
   }
 
@@ -58,8 +64,8 @@ export class App {
       })
     )
     this.app.use('*', responseMiddleware())
-    this.app.use(addSession);
-    this.app.use(sessionValidator);
+    this.app.use(addSession)
+    this.app.use(sessionValidator)
   }
 
   private initializeSwaggerUI() {

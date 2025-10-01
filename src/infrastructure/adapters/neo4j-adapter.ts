@@ -1,4 +1,4 @@
-import  { auth, driver, type Driver, type Session } from 'neo4j-driver'
+import { auth, driver, type Driver, type Session } from 'neo4j-driver'
 
 import type { DatabaseAdapter } from '@/infrastructure/adapters/database-adapter'
 
